@@ -6,12 +6,6 @@ const { execSync } = require('child_process');
 
 // Default values
 const DEFAULTS = {
-  REV_SHARE_PERCENT: '30',
-  PERFORMANCE_REV_SHARE_PERCENT: '40',
-  PERFORMANCE_THRESHOLD: '50',
-  PAYMENT_FREQUENCY: 'monthly',
-  PAYMENT_METHOD: 'PayPal or bank transfer',
-  MIN_PAYOUT: '25',
   GOVERNING_LAW: 'Ontario, Canada',
 };
 
@@ -42,14 +36,10 @@ function parseArgs() {
   return config;
 }
 
-function calculateEndDate(startDate) {
-  const date = new Date(startDate);
-  date.setFullYear(date.getFullYear() + 1);
-  return date.toISOString().split('T')[0];
-}
-
 function formatDate(dateStr) {
-  const date = new Date(dateStr);
+  // Parse as local date to avoid timezone issues
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -59,23 +49,6 @@ function formatDate(dateStr) {
 
 function processTemplate(template, config) {
   let result = template;
-
-  // Handle conditional blocks for minor/adult
-  const isMinor = config.IS_MINOR === 'true' || config.IS_MINOR === true;
-
-  if (isMinor) {
-    // Remove IF_ADULT blocks
-    result = result.replace(/\{\{#IF_ADULT\}\}[\s\S]*?\{\{\/IF_ADULT\}\}/g, '');
-    // Keep IF_MINOR content but remove tags
-    result = result.replace(/\{\{#IF_MINOR\}\}/g, '');
-    result = result.replace(/\{\{\/IF_MINOR\}\}/g, '');
-  } else {
-    // Remove IF_MINOR blocks
-    result = result.replace(/\{\{#IF_MINOR\}\}[\s\S]*?\{\{\/IF_MINOR\}\}/g, '');
-    // Keep IF_ADULT content but remove tags
-    result = result.replace(/\{\{#IF_ADULT\}\}/g, '');
-    result = result.replace(/\{\{\/IF_ADULT\}\}/g, '');
-  }
 
   // Replace all variables
   for (const [key, value] of Object.entries(config)) {
@@ -96,14 +69,8 @@ function generateContract(config) {
     }
   }
 
-  // Calculate end date if not provided
-  if (!config.END_DATE) {
-    config.END_DATE = calculateEndDate(config.START_DATE);
-  }
-
-  // Format dates for display
+  // Format start date for display
   config.START_DATE = formatDate(config.START_DATE);
-  config.END_DATE = formatDate(config.END_DATE);
 
   // Read template
   const templatePath = path.join(__dirname, '..', 'templates', 'founding-partner-agreement.md');
@@ -131,41 +98,14 @@ function generateContract(config) {
   const htmlPath = path.join(outputDir, `${outputName}.html`);
   const pdfPath = path.join(outputDir, `${outputName}.pdf`);
 
-  // Convert markdown to HTML with styling
-  const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Kauntor Partnership Agreement</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 20px; color: #333; }
-    h1 { color: #111; border-bottom: 2px solid #333; padding-bottom: 10px; }
-    h2 { color: #222; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-    table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-    th { background-color: #f5f5f5; }
-    hr { border: none; border-top: 1px solid #ddd; margin: 30px 0; }
-    ul { margin: 10px 0; padding-left: 25px; }
-    li { margin: 5px 0; }
-    strong { color: #111; }
-    @media print { body { margin: 0; padding: 20px; } }
-  </style>
-</head>
-<body>
-${processed.replace(/^# /gm, '<h1>').replace(/^## /gm, '<h2>').replace(/\n\n/g, '</p><p>').replace(/^- /gm, '<li>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}
-</body>
-</html>`;
-
-  // Try pandoc for better HTML conversion
+  // Try pandoc for HTML conversion
   try {
-    execSync(`pandoc "${mdPath}" -o "${htmlPath}" --standalone --metadata title="Kauntor Partnership Agreement" -c "" --embed-resources`, {
+    execSync(`pandoc "${mdPath}" -o "${htmlPath}" --standalone --metadata title="Kauntor Partnership Agreement"`, {
       stdio: 'pipe'
     });
     console.log(`Generated: ${htmlPath}`);
   } catch (e) {
-    // Fallback to simple HTML
-    fs.writeFileSync(htmlPath, htmlContent);
-    console.log(`Generated: ${htmlPath}`);
+    console.log(`Note: HTML generation failed. Markdown file is available at: ${mdPath}`);
   }
 
   // Generate PDF - try multiple engines
@@ -213,12 +153,15 @@ function showHelp() {
   console.log(`
 Kauntor Contract Generator
 
+Generates Founding Partner Agreements with:
+- 40% revenue share (net of App Store fees, taxes, refunds)
+- 25% off annual subscription for partner's audience
+- Contract valid until December 31, 2026
+- Payment via Zelle, PayPal, Revolut, Interac, or Bitcoin
+
 Usage:
   node generate-contract.js [config.json] [options]
   node generate-contract.js [options]
-
-You can provide a JSON config file, command-line options, or both.
-Command-line options override values from the config file.
 
 Required Fields:
   --partner-name <name>     Partner's full legal name
@@ -226,19 +169,7 @@ Required Fields:
   --promo-code <code>       Unique promotional code for the partner
 
 Optional Fields:
-  --end-date <YYYY-MM-DD>          Agreement end date (default: 1 year from start)
-  --rev-share-percent <num>        Revenue share percentage (default: 30)
-  --performance-rev-share-percent  Performance boost percentage (default: 40)
-  --performance-threshold <num>    Active subs threshold for boost (default: 50)
-  --payment-frequency <freq>       Payment frequency (default: monthly)
-  --payment-method <method>        Payment method (default: PayPal or bank transfer)
-  --min-payout <amount>            Minimum payout threshold (default: 25)
-  --governing-law <jurisdiction>   Governing law jurisdiction (default: Ontario, Canada)
-
-Minor Partner Fields:
-  --is-minor true                  Flag if partner is under 18
-  --minor-name <name>              Minor's name (if different from partner name)
-  --guardian-name <name>           Parent/Guardian's full legal name
+  --governing-law <jurisdiction>   Legal jurisdiction (default: Ontario, Canada)
 
 Examples:
   # Using a JSON config file
@@ -252,15 +183,6 @@ Examples:
 
   # Config file with overrides
   node generate-contract.js partners/john-smith.json --promo-code "NEWCODE25"
-
-  # Minor partner (requires guardian)
-  node generate-contract.js \\
-    --partner-name "Jane Doe" \\
-    --start-date "2025-01-15" \\
-    --promo-code "JANEFIT25" \\
-    --is-minor true \\
-    --minor-name "Jake Doe" \\
-    --guardian-name "Jane Doe"
 `);
 }
 
