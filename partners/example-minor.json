@@ -1,0 +1,15 @@
+{
+  "PARTNER_NAME": "Parent Name",
+  "START_DATE": "2025-01-15",
+  "PROMO_CODE": "TEENFIT25",
+  "REV_SHARE_PERCENT": "30",
+  "PERFORMANCE_REV_SHARE_PERCENT": "40",
+  "PERFORMANCE_THRESHOLD": "50",
+  "PAYMENT_FREQUENCY": "monthly",
+  "PAYMENT_METHOD": "PayPal",
+  "MIN_PAYOUT": "25",
+  "GOVERNING_LAW": "Ontario, Canada",
+  "IS_MINOR": true,
+  "MINOR_NAME": "Teen Creator Name",
+  "GUARDIAN_NAME": "Parent Name"
+}

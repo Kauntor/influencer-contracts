@@ -1,0 +1,14 @@
+# Generated contracts (don't commit sensitive partner data)
+output/*.md
+output/*.html
+output/*.pdf
+
+# Keep the output directory
+!output/.gitkeep
+
+# Node
+node_modules/
+
+# OS files
+.DS_Store
+*.swp

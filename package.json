@@ -1,0 +1,26 @@
+{
+  "name": "kauntor-influencer-contracts",
+  "version": "1.0.0",
+  "description": "Influencer partnership contract templates and PDF generation for Kauntor",
+  "main": "scripts/generate-contract.js",
+  "scripts": {
+    "generate": "node scripts/generate-contract.js",
+    "example": "node scripts/generate-contract.js --partner-name 'Example Partner' --start-date '2025-01-15' --promo-code 'EXAMPLE25'"
+  },
+  "bin": {
+    "kauntor-contract": "scripts/generate-contract.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kauntor/influencer-contracts.git"
+  },
+  "keywords": [
+    "kauntor",
+    "contracts",
+    "influencer",
+    "partnership"
+  ],
+  "author": "Kauntor",
+  "license": "UNLICENSED",
+  "private": true
+}
